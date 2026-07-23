@@ -7,9 +7,7 @@
   "main": "src/server.js",
   "scripts": {
     "dev": "node src/server.js",
-    "start": "node src/server.js",
-    "build": "node -c src/server.js src/app.js",
-    "lint": "node -c src/server.js src/app.js"
+    "start": "node src/server.js"
   },
   "dependencies": {
     "dotenv": "^17.2.3",
