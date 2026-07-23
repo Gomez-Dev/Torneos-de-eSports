@@ -1,0 +1,18 @@
+{
+  "name": "proyecto-esports",
+  "private": true,
+  "version": "1.0.0",
+  "description": "API REST para plataforma de torneos de eSports - Backend II",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "dev": "node src/server.js",
+    "start": "node src/server.js",
+    "build": "node -c src/server.js src/app.js",
+    "lint": "node -c src/server.js src/app.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2"
+  }
+}
