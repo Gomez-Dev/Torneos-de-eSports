@@ -46,17 +46,37 @@ Torneos-de-eSports/
 │   ├── server.js
 │   │
 │   ├── config/
+│   │   ├── database.config.js
+│   │   └── environment.config.js
+│   │
 │   ├── constants/
 │   ├── controllers/
+│   │   └── sessions.controller.js
+│   │
 │   ├── dao/
+│   │   └── users.dao.js
+│   │
 │   ├── docs/
 │   ├── middlewares/
+│   │
 │   ├── models/
+│   │   └── User.js
+│   │
 │   ├── public/
+│   │
 │   ├── repositories/
+│   │   └── users.repository.js
+│   │
 │   ├── routes/
+│   │   ├── events.router.js
+│   │   ├── health.router.js
+│   │   └── sessions.router.js
+│   │
 │   ├── services/
+│   │   └── sessions.service.js
+│   │
 │   └── utils/
+│       └── hash.js
 │
 ├── .env.example
 ├── .gitignore
@@ -68,20 +88,20 @@ Torneos-de-eSports/
 
 # 📚 Responsabilidad de cada carpeta
 
-| Carpeta           | Responsabilidad                                                                                                                                  |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **config/**       | Centraliza la configuración general de la aplicación, incluyendo variables de entorno, conexión a la base de datos y configuración de librerías. |
-| **constants/**    | Contiene constantes reutilizables como roles, estados, mensajes y otros valores compartidos por toda la aplicación.                              |
-| **controllers/**  | Reciben las solicitudes HTTP, procesan la información necesaria y delegan la lógica de negocio a los servicios correspondientes.                 |
-| **dao/**          | Gestiona el acceso directo a la base de datos, encapsulando las operaciones de persistencia.                                                     |
-| **docs/**         | Espacio destinado a la documentación técnica del proyecto, diagramas, colecciones de Postman y futuras especificaciones de la API.               |
-| **middlewares/**  | Agrupa los middlewares reutilizables para autenticación, autorización, validaciones y manejo centralizado de errores.                            |
-| **models/**       | Define los modelos de datos de la aplicación mediante Mongoose.                                                                                  |
-| **public/**       | Contiene recursos públicos utilizados por la aplicación cuando sean necesarios.                                                                  |
-| **repositories/** | Actúa como intermediario entre los servicios y la capa de acceso a datos, desacoplando la lógica de negocio de la persistencia.                  |
-| **routes/**       | Define los endpoints de la API y los asocia con sus respectivos controladores.                                                                   |
-| **services/**     | Implementa la lógica de negocio de la aplicación y coordina la comunicación entre controladores y repositorios.                                  |
-| **utils/**        | Reúne funciones auxiliares reutilizables por las distintas capas del proyecto.                                                                   |
+| Carpeta           | Responsabilidad                                                                                                      |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **config/**       | Centraliza la configuración general de la aplicación, incluyendo variables de entorno y conexión a la base de datos. |
+| **constants/**    | Contiene constantes reutilizables compartidas por toda la aplicación.                                                |
+| **controllers/**  | Reciben las solicitudes HTTP y delegan la lógica de negocio a los servicios.                                         |
+| **dao/**          | Gestiona el acceso directo a la base de datos mediante Mongoose.                                                     |
+| **docs/**         | Espacio destinado a documentación técnica y futuras especificaciones de la API.                                      |
+| **middlewares/**  | Contiene middlewares reutilizables para futuras funcionalidades.                                                     |
+| **models/**       | Define los modelos de datos mediante Mongoose.                                                                       |
+| **public/**       | Recursos públicos utilizados por la aplicación cuando sean necesarios.                                               |
+| **repositories/** | Intermediario entre los servicios y la capa de acceso a datos.                                                       |
+| **routes/**       | Define los endpoints de la API.                                                                                      |
+| **services/**     | Implementa la lógica de negocio de la aplicación.                                                                    |
+| **utils/**        | Funciones auxiliares reutilizables, como el helper de bcrypt.                                                        |
 
 ---
 
@@ -90,12 +110,10 @@ Torneos-de-eSports/
 - Node.js
 - Express
 - JavaScript (ES Modules)
-- dotenv
-- MongoDB Atlas
+- MongoDB
 - Mongoose
-- JWT
-- Passport
 - bcrypt
+- dotenv
 
 ---
 
@@ -104,10 +122,10 @@ Torneos-de-eSports/
 Crear un archivo **.env** tomando como referencia el archivo **.env.example**.
 
 ```env
-PORT=
-NODE_ENV=
-MONGO_URL=
-JWT_SECRET=
+PORT=3000
+NODE_ENV=development
+MONGO_URL=mongodb://127.0.0.1:27017/torneos-esports
+JWT_SECRET=your_secret_key
 ```
 
 ---
@@ -132,7 +150,7 @@ Instalar las dependencias:
 npm install
 ```
 
-Iniciar el servidor en modo desarrollo:
+Iniciar el servidor:
 
 ```bash
 npm run dev
@@ -148,7 +166,7 @@ npm run dev
 GET /api/health
 ```
 
-**Respuesta:**
+**Respuesta**
 
 ```json
 {
@@ -165,7 +183,7 @@ GET /api/health
 GET /api/events
 ```
 
-**Respuesta inicial:**
+**Respuesta**
 
 ```json
 {
@@ -178,7 +196,47 @@ GET /api/events
 
 ## Sessions
 
-La estructura del recurso **Sessions** se encuentra preparada para incorporar las funcionalidades relacionadas con autenticación y gestión de sesiones.
+### Registro de usuarios
+
+```http
+POST /api/sessions/register
+```
+
+### Body
+
+```json
+{
+  "first_name": "José",
+  "last_name": "Gómez",
+  "email": "jose@gmail.com",
+  "password": "12345678"
+}
+```
+
+### Respuesta exitosa
+
+```json
+{
+  "status": "success",
+  "payload": {
+    "id": "...",
+    "first_name": "José",
+    "last_name": "Gómez",
+    "email": "jose@gmail.com",
+    "role": "user"
+  }
+}
+```
+
+### Validaciones
+
+- Todos los campos son obligatorios.
+- El email debe tener un formato válido.
+- La contraseña debe tener al menos 8 caracteres.
+- El email se normaliza automáticamente (`trim` + `lowercase`).
+- No se permiten usuarios con emails duplicados.
+- La contraseña se almacena hasheada utilizando **bcrypt**.
+- La respuesta del endpoint nunca devuelve la contraseña.
 
 ---
 
@@ -186,7 +244,6 @@ La estructura del recurso **Sessions** se encuentra preparada para incorporar la
 
 Las siguientes funcionalidades se incorporarán progresivamente durante la evolución del proyecto:
 
-- Registro de usuarios.
 - Inicio de sesión.
 - Autenticación mediante JWT.
 - Autorización basada en roles.
@@ -196,7 +253,7 @@ Las siguientes funcionalidades se incorporarán progresivamente durante la evolu
 - Sistema de inscripciones a torneos.
 - Control de cupos y validaciones de negocio.
 - Protección de rutas mediante middlewares.
-- Persistencia de datos con MongoDB Atlas y Mongoose.
+- Persistencia de datos con MongoDB y Mongoose.
 - Documentación de la API.
 - Manejo centralizado de errores.
 - Registro de eventos (Logging).
