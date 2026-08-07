@@ -1,8 +1,8 @@
 # 🎮 Torneos de eSports API
 
-API REST desarrollada con **Node.js** y **Express** para la administración de torneos de eSports.
+API REST desarrollada con **Node.js**, **Express** y **MongoDB Atlas** para la administración de torneos de eSports.
 
-La aplicación permite gestionar torneos, categorías, usuarios e inscripciones mediante una arquitectura por capas, diseñada para ofrecer un código organizado, mantenible y escalable. La separación de responsabilidades facilita la incorporación de nuevas funcionalidades, mejora la reutilización de componentes y permite que la aplicación evolucione de forma ordenada.
+El proyecto implementa una arquitectura por capas y actualmente permite registrar usuarios, iniciar sesión mediante JWT almacenado en una cookie HTTP Only, consultar el usuario autenticado y cerrar sesión de forma segura.
 
 ---
 
@@ -32,7 +32,7 @@ DAO
 MongoDB
 ```
 
-Esta estructura desacopla las diferentes responsabilidades de la aplicación, facilitando el mantenimiento, la escalabilidad y la incorporación de nuevas funcionalidades sin afectar el resto del sistema.
+Esta estructura desacopla las responsabilidades de la aplicación, facilitando el mantenimiento, la escalabilidad y la incorporación de nuevas funcionalidades.
 
 ---
 
@@ -57,7 +57,9 @@ Torneos-de-eSports/
 │   │   └── users.dao.js
 │   │
 │   ├── docs/
+│   │
 │   ├── middlewares/
+│   │   └── auth.middleware.js
 │   │
 │   ├── models/
 │   │   └── User.js
@@ -76,7 +78,8 @@ Torneos-de-eSports/
 │   │   └── sessions.service.js
 │   │
 │   └── utils/
-│       └── hash.js
+│       ├── hash.js
+│       └── jwt.js
 │
 ├── .env.example
 ├── .gitignore
@@ -88,20 +91,20 @@ Torneos-de-eSports/
 
 # 📚 Responsabilidad de cada carpeta
 
-| Carpeta           | Responsabilidad                                                                                                      |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **config/**       | Centraliza la configuración general de la aplicación, incluyendo variables de entorno y conexión a la base de datos. |
-| **constants/**    | Contiene constantes reutilizables compartidas por toda la aplicación.                                                |
-| **controllers/**  | Reciben las solicitudes HTTP y delegan la lógica de negocio a los servicios.                                         |
-| **dao/**          | Gestiona el acceso directo a la base de datos mediante Mongoose.                                                     |
-| **docs/**         | Espacio destinado a documentación técnica y futuras especificaciones de la API.                                      |
-| **middlewares/**  | Contiene middlewares reutilizables para futuras funcionalidades.                                                     |
-| **models/**       | Define los modelos de datos mediante Mongoose.                                                                       |
-| **public/**       | Recursos públicos utilizados por la aplicación cuando sean necesarios.                                               |
-| **repositories/** | Intermediario entre los servicios y la capa de acceso a datos.                                                       |
-| **routes/**       | Define los endpoints de la API.                                                                                      |
-| **services/**     | Implementa la lógica de negocio de la aplicación.                                                                    |
-| **utils/**        | Funciones auxiliares reutilizables, como el helper de bcrypt.                                                        |
+| Carpeta           | Responsabilidad                                                              |
+| ----------------- | ---------------------------------------------------------------------------- |
+| **config/**       | Configuración de variables de entorno y conexión a la base de datos.         |
+| **constants/**    | Constantes reutilizables de la aplicación.                                   |
+| **controllers/**  | Reciben las solicitudes HTTP y delegan la lógica de negocio a los servicios. |
+| **dao/**          | Gestiona el acceso directo a MongoDB mediante Mongoose.                      |
+| **docs/**         | Espacio destinado a documentación técnica del proyecto.                      |
+| **middlewares/**  | Contiene middlewares reutilizables, como autenticación mediante JWT.         |
+| **models/**       | Define los modelos de datos mediante Mongoose.                               |
+| **public/**       | Recursos públicos de la aplicación.                                          |
+| **repositories/** | Intermediario entre los servicios y la capa de acceso a datos.               |
+| **routes/**       | Define los endpoints de la API.                                              |
+| **services/**     | Implementa la lógica de negocio de la aplicación.                            |
+| **utils/**        | Funciones auxiliares para hash de contraseñas y manejo de JWT.               |
 
 ---
 
@@ -110,9 +113,11 @@ Torneos-de-eSports/
 - Node.js
 - Express
 - JavaScript (ES Modules)
-- MongoDB
+- MongoDB Atlas
 - Mongoose
 - bcrypt
+- JSON Web Token (JWT)
+- cookie-parser
 - dotenv
 
 ---
@@ -124,8 +129,9 @@ Crear un archivo **.env** tomando como referencia el archivo **.env.example**.
 ```env
 PORT=3000
 NODE_ENV=development
-MONGO_URL=mongodb://127.0.0.1:27017/torneos-esports
+MONGO_URL=mongodb+srv://<usuario>:<password>@cluster0.xxxxx.mongodb.net/torneos-esports
 JWT_SECRET=your_secret_key
+JWT_EXPIRES_IN=1h
 ```
 
 ---
@@ -135,7 +141,7 @@ JWT_SECRET=your_secret_key
 Clonar el repositorio:
 
 ```bash
-git clone <URL_DEL_REPOSITORIO>
+git clone https://github.com/Gomez-Dev/Torneos-de-eSports.git
 ```
 
 Ingresar al directorio del proyecto:
@@ -160,13 +166,26 @@ npm run dev
 
 # 🌐 Endpoints disponibles
 
-## Health Check
+| Método | Endpoint                 | Descripción                                                       |
+| ------ | ------------------------ | ----------------------------------------------------------------- |
+| GET    | `/api/health`            | Verifica el estado del servidor.                                  |
+| GET    | `/api/events`            | Devuelve la colección inicial de eventos.                         |
+| POST   | `/api/sessions/register` | Registra un nuevo usuario.                                        |
+| POST   | `/api/sessions/login`    | Inicia sesión y genera un JWT almacenado en una cookie HTTP Only. |
+| GET    | `/api/sessions/current`  | Devuelve el usuario autenticado.                                  |
+| POST   | `/api/sessions/logout`   | Cierra la sesión eliminando la cookie de autenticación.           |
+
+---
+
+# ❤️ Health Check
+
+## Request
 
 ```http
 GET /api/health
 ```
 
-**Respuesta**
+## Response
 
 ```json
 {
@@ -177,13 +196,15 @@ GET /api/health
 
 ---
 
-## Events
+# 📅 Events
+
+## Request
 
 ```http
 GET /api/events
 ```
 
-**Respuesta**
+## Response
 
 ```json
 {
@@ -194,9 +215,9 @@ GET /api/events
 
 ---
 
-## Sessions
+# 👤 Registro de usuario
 
-### Registro de usuarios
+## Request
 
 ```http
 POST /api/sessions/register
@@ -213,7 +234,7 @@ POST /api/sessions/register
 }
 ```
 
-### Respuesta exitosa
+## Response
 
 ```json
 {
@@ -228,33 +249,119 @@ POST /api/sessions/register
 }
 ```
 
-### Validaciones
+---
 
-- Todos los campos son obligatorios.
-- El email debe tener un formato válido.
-- La contraseña debe tener al menos 8 caracteres.
-- El email se normaliza automáticamente (`trim` + `lowercase`).
-- No se permiten usuarios con emails duplicados.
-- La contraseña se almacena hasheada utilizando **bcrypt**.
-- La respuesta del endpoint nunca devuelve la contraseña.
+# 🔐 Login
+
+## Request
+
+```http
+POST /api/sessions/login
+```
+
+### Body
+
+```json
+{
+  "email": "jose@gmail.com",
+  "password": "12345678"
+}
+```
+
+## Response
+
+```json
+{
+  "status": "success",
+  "message": "Login correcto"
+}
+```
+
+Al iniciar sesión correctamente, el servidor genera un **JWT** y lo almacena en una cookie **HTTP Only** llamada **currentUser**.
+
+---
+
+# 🙋 Usuario autenticado
+
+## Request
+
+```http
+GET /api/sessions/current
+```
+
+Requiere la cookie **currentUser** generada durante el login.
+
+## Response
+
+```json
+{
+  "status": "success",
+  "payload": {
+    "id": "...",
+    "email": "jose@gmail.com",
+    "role": "user"
+  }
+}
+```
+
+Si el usuario no está autenticado:
+
+```json
+{
+  "status": "error",
+  "message": "No autenticado"
+}
+```
+
+---
+
+# 🚪 Logout
+
+## Request
+
+```http
+POST /api/sessions/logout
+```
+
+## Response
+
+```json
+{
+  "status": "success",
+  "message": "Sesión cerrada"
+}
+```
+
+La cookie **currentUser** es eliminada del navegador.
+
+---
+
+# ✅ Validaciones implementadas
+
+- Validación de campos obligatorios.
+- Validación del formato del email.
+- Normalización automática del email (`trim()` + `lowercase()`).
+- Prevención de usuarios duplicados.
+- Hash de contraseñas mediante **bcrypt**.
+- Comparación segura de contraseñas.
+- Generación de JWT firmado mediante `JWT_SECRET`.
+- Cookie HTTP Only para autenticación.
+- Middleware de autenticación para proteger rutas.
+- La contraseña nunca se almacena ni se devuelve en texto plano.
 
 ---
 
 # 🔮 Roadmap
 
-Las siguientes funcionalidades se incorporarán progresivamente durante la evolución del proyecto:
+Las siguientes funcionalidades se incorporarán en futuras versiones:
 
-- Inicio de sesión.
-- Autenticación mediante JWT.
-- Autorización basada en roles.
-- Recuperación y restablecimiento de contraseña.
 - Gestión completa de torneos.
 - Gestión de categorías.
-- Sistema de inscripciones a torneos.
-- Control de cupos y validaciones de negocio.
-- Protección de rutas mediante middlewares.
-- Persistencia de datos con MongoDB y Mongoose.
-- Documentación de la API.
-- Manejo centralizado de errores.
-- Registro de eventos (Logging).
-- Envío de notificaciones por correo electrónico.
+- Sistema de inscripciones.
+- Control de cupos y reglas de negocio.
+- Autorización basada en roles.
+- Recuperación y restablecimiento de contraseña.
+- Documentación de la API con Swagger.
+- Logging.
+- Notificaciones por correo electrónico.
+- Tests automatizados.

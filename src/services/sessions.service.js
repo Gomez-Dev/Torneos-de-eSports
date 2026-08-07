@@ -1,5 +1,6 @@
 import UsersRepository from "../repositories/users.repository.js";
-import { createHash } from "../utils/hash.js";
+import { createHash, isValidPassword } from "../utils/hash.js";
+import { generateToken } from "../utils/jwt.js";
 
 class SessionsService {
   constructor() {
@@ -54,6 +55,41 @@ class SessionsService {
       last_name: newUser.last_name,
       email: newUser.email,
       role: newUser.role,
+    };
+  }
+
+  async login({ email, password }) {
+    if (!email || !password) {
+      throw new Error("Credenciales inválidas");
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    const user = await this.usersRepository.getUserByEmail(normalizedEmail);
+
+    console.log("Usuario encontrado:", user);
+
+    if (!user) {
+      throw new Error("Credenciales inválidas");
+    }
+
+    const validPassword = await isValidPassword(password, user.password);
+
+    console.log("Contraseña válida:", validPassword);
+
+    if (!validPassword) {
+      throw new Error("Credenciales inválidas");
+    }
+
+    const token = generateToken(user);
+
+    return {
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+      },
     };
   }
 }
