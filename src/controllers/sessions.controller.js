@@ -1,7 +1,5 @@
-import SessionsService from "../services/sessions.service.js";
 import { env } from "../config/environment.config.js";
-
-const sessionsService = new SessionsService();
+import { generateToken } from "../utils/jwt.js";
 
 export const sessionInfo = (req, res) => {
   res.status(200).json({
@@ -10,57 +8,38 @@ export const sessionInfo = (req, res) => {
   });
 };
 
-export const register = async (req, res) => {
-  try {
-    const user = await sessionsService.register(req.body);
-
-    res.status(201).json({
-      status: "success",
-      payload: user,
-    });
-  } catch (error) {
-    if (error.message === "El email ya está registrado") {
-      return res.status(409).json({
-        status: "error",
-        message: error.message,
-      });
-    }
-
-    res.status(400).json({
-      status: "error",
-      message: error.message,
-    });
-  }
+export const register = (req, res) => {
+  res.status(201).json({
+    status: "success",
+    payload: req.user,
+  });
 };
 
-export const login = async (req, res) => {
-  try {
-    const { token } = await sessionsService.login(req.body);
+export const login = (req, res) => {
+  const token = generateToken(req.user);
 
-    res
-      .cookie("currentUser", token, {
-        httpOnly: true,
-        sameSite: "lax",
-        maxAge: 3600000,
-        secure: env.NODE_ENV === "production",
-      })
-      .status(200)
-      .json({
-        status: "success",
-        message: "Login correcto",
-      });
-  } catch (error) {
-    res.status(401).json({
-      status: "error",
-      message: error.message,
+  res
+    .cookie("currentUser", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      maxAge: 3600000,
+      secure: env.NODE_ENV === "production",
+    })
+    .status(200)
+    .json({
+      status: "success",
+      message: "Login correcto",
     });
-  }
 };
 
 export const current = (req, res) => {
   res.status(200).json({
     status: "success",
-    payload: req.user,
+    payload: {
+      id: req.user.id,
+      email: req.user.email,
+      role: req.user.role,
+    },
   });
 };
 
