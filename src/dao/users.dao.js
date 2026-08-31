@@ -8,6 +8,10 @@ class UsersDAO {
   async createUser(userData) {
     return await User.create(userData);
   }
+
+  async getAll() {
+    return await User.find();
+  }
 }
 
 export default UsersDAO;
