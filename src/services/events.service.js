@@ -5,8 +5,101 @@ class EventsService {
     this.eventsRepository = eventsRepository;
   }
 
-  async getAllEvents() {
-    return await this.eventsRepository.getAllEvents();
+  async getAllEvents(query = {}) {
+    const {
+      status,
+      category,
+      location,
+      dateFrom,
+      dateTo,
+      page = 1,
+      limit = 10,
+      sort = "date",
+    } = query;
+
+    const filters = {};
+
+    if (status) {
+      filters.status = status;
+    }
+
+    if (category) {
+      filters.category = category;
+    }
+
+    if (location) {
+      filters.location = {
+        $regex: location,
+        $options: "i",
+      };
+    }
+
+    if (dateFrom || dateTo) {
+      filters.date = {};
+
+      if (dateFrom) {
+        const from = new Date(dateFrom);
+
+        if (Number.isNaN(from.getTime())) {
+          throw new Error("La fecha dateFrom no es válida");
+        }
+
+        filters.date.$gte = from;
+      }
+
+      if (dateTo) {
+        const to = new Date(dateTo);
+
+        if (Number.isNaN(to.getTime())) {
+          throw new Error("La fecha dateTo no es válida");
+        }
+
+        filters.date.$lte = to;
+      }
+    }
+
+    const currentPage = Math.max(Number(page), 1);
+    const currentLimit = Math.max(Number(limit), 1);
+
+    const allowedSortFields = [
+      "date",
+      "title",
+      "capacity",
+      "price",
+      "createdAt",
+    ];
+
+    let sortField = "date";
+    let sortOrder = 1;
+
+    if (sort) {
+      const requestedSort = sort.startsWith("-") ? sort.substring(1) : sort;
+
+      if (allowedSortFields.includes(requestedSort)) {
+        sortField = requestedSort;
+        sortOrder = sort.startsWith("-") ? -1 : 1;
+      }
+    }
+
+    const total = await this.eventsRepository.countEvents(filters);
+
+    const events = await this.eventsRepository.getAllEvents(filters, {
+      page: currentPage,
+      limit: currentLimit,
+      sort: {
+        [sortField]: sortOrder,
+      },
+    });
+
+    const totalPages = Math.ceil(total / currentLimit);
+
+    return {
+      data: events,
+      page: currentPage,
+      limit: currentLimit,
+      total,
+      totalPages,
+    };
   }
 
   async getEventById(id) {
@@ -20,8 +113,55 @@ class EventsService {
   }
 
   async createEvent(eventData, userId) {
+    const {
+      title,
+      description,
+      category,
+      date,
+      location,
+      capacity,
+      price,
+      status,
+    } = eventData;
+
+    if (!title || !description || !category || !date || !location) {
+      throw new Error("Faltan campos obligatorios");
+    }
+
+    const eventDate = new Date(date);
+
+    if (Number.isNaN(eventDate.getTime())) {
+      throw new Error("La fecha del evento no es válida");
+    }
+
+    if (eventDate < new Date()) {
+      throw new Error("No se puede crear un evento con una fecha pasada");
+    }
+
+    if (capacity === undefined || Number(capacity) <= 0) {
+      throw new Error("La capacidad debe ser mayor a 0");
+    }
+
+    if (price === undefined || Number(price) < 0) {
+      throw new Error("El precio no puede ser menor a 0");
+    }
+
+    if (
+      status &&
+      !["draft", "published", "cancelled", "finished"].includes(status)
+    ) {
+      throw new Error("El estado del evento no es válido");
+    }
+
     return await this.eventsRepository.createEvent({
-      ...eventData,
+      title,
+      description,
+      category,
+      date: eventDate,
+      location,
+      capacity,
+      price,
+      status: status || "published",
       organizer: userId,
     });
   }
@@ -40,10 +180,52 @@ class EventsService {
       throw new Error("No tenés permisos para modificar este evento");
     }
 
+    if (event.status === "cancelled") {
+      const justification = eventData.justification;
+
+      if (!justification || !justification.trim()) {
+        throw new Error(
+          "Un evento cancelado solo puede modificarse presentando una justificación",
+        );
+      }
+    }
+
+    if (eventData.date !== undefined) {
+      const eventDate = new Date(eventData.date);
+
+      if (Number.isNaN(eventDate.getTime())) {
+        throw new Error("La fecha del evento no es válida");
+      }
+
+      if (eventDate < new Date()) {
+        throw new Error("No se puede modificar el evento a una fecha pasada");
+      }
+
+      eventData.date = eventDate;
+    }
+
+    if (eventData.capacity !== undefined && Number(eventData.capacity) <= 0) {
+      throw new Error("La capacidad debe ser mayor a 0");
+    }
+
+    if (eventData.price !== undefined && Number(eventData.price) < 0) {
+      throw new Error("El precio no puede ser menor a 0");
+    }
+
+    if (
+      eventData.status === "published" &&
+      (event.status === "finished" || event.status === "cancelled")
+    ) {
+      throw new Error("No se puede publicar un evento finalizado o cancelado");
+    }
+
+    delete eventData.organizer;
+    delete eventData.justification;
+
     return await this.eventsRepository.updateEvent(id, eventData);
   }
 
-  async deleteEvent(id, user) {
+  async updateEventStatus(id, status, user, justification) {
     const event = await this.eventsRepository.getEventById(id);
 
     if (!event) {
@@ -54,10 +236,33 @@ class EventsService {
     const isOwner = event.organizer.toString() === user.id.toString();
 
     if (!isAdmin && !isOwner) {
-      throw new Error("No tenés permisos para eliminar este evento");
+      throw new Error("No tenés permisos para modificar este evento");
     }
 
-    return await this.eventsRepository.deleteEvent(id);
+    const allowedStatuses = ["draft", "published", "cancelled", "finished"];
+
+    if (!allowedStatuses.includes(status)) {
+      throw new Error("El estado del evento no es válido");
+    }
+
+    if (
+      status === "published" &&
+      (event.status === "finished" || event.status === "cancelled")
+    ) {
+      throw new Error("No se puede publicar un evento finalizado o cancelado");
+    }
+
+    if (event.status === "cancelled") {
+      if (!justification || !justification.trim()) {
+        throw new Error(
+          "Un evento cancelado solo puede modificarse presentando una justificación",
+        );
+      }
+    }
+
+    return await this.eventsRepository.updateEvent(id, {
+      status,
+    });
   }
 }
 
