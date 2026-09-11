@@ -1,5 +1,6 @@
 import { env } from "../config/environment.config.js";
 import { generateToken } from "../utils/jwt.js";
+import { userDTO } from "../dto/user.dto.js";
 
 export const sessionInfo = (req, res) => {
   res.status(200).json({
@@ -11,7 +12,7 @@ export const sessionInfo = (req, res) => {
 export const register = (req, res) => {
   res.status(201).json({
     status: "success",
-    payload: req.user,
+    payload: userDTO(req.user),
   });
 };
 
@@ -35,11 +36,7 @@ export const login = (req, res) => {
 export const current = (req, res) => {
   res.status(200).json({
     status: "success",
-    payload: {
-      id: req.user.id,
-      email: req.user.email,
-      role: req.user.role,
-    },
+    payload: userDTO(req.user),
   });
 };
 

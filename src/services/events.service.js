@@ -41,7 +41,9 @@ class EventsService {
         const from = new Date(dateFrom);
 
         if (Number.isNaN(from.getTime())) {
-          throw new Error("La fecha dateFrom no es válida");
+          const error = new Error("La fecha dateFrom no es válida");
+          error.statusCode = 400;
+          throw error;
         }
 
         filters.date.$gte = from;
@@ -51,7 +53,9 @@ class EventsService {
         const to = new Date(dateTo);
 
         if (Number.isNaN(to.getTime())) {
-          throw new Error("La fecha dateTo no es válida");
+          const error = new Error("La fecha dateTo no es válida");
+          error.statusCode = 400;
+          throw error;
         }
 
         filters.date.$lte = to;
@@ -106,7 +110,9 @@ class EventsService {
     const event = await this.eventsRepository.getEventById(id);
 
     if (!event) {
-      throw new Error("Evento no encontrado");
+      const error = new Error("Evento no encontrado");
+      error.statusCode = 404;
+      throw error;
     }
 
     return event;
@@ -125,32 +131,46 @@ class EventsService {
     } = eventData;
 
     if (!title || !description || !category || !date || !location) {
-      throw new Error("Faltan campos obligatorios");
+      const error = new Error("Faltan campos obligatorios");
+      error.statusCode = 400;
+      throw error;
     }
 
     const eventDate = new Date(date);
 
     if (Number.isNaN(eventDate.getTime())) {
-      throw new Error("La fecha del evento no es válida");
+      const error = new Error("La fecha del evento no es válida");
+      error.statusCode = 400;
+      throw error;
     }
 
     if (eventDate < new Date()) {
-      throw new Error("No se puede crear un evento con una fecha pasada");
+      const error = new Error(
+        "No se puede crear un evento con una fecha pasada",
+      );
+      error.statusCode = 400;
+      throw error;
     }
 
     if (capacity === undefined || Number(capacity) <= 0) {
-      throw new Error("La capacidad debe ser mayor a 0");
+      const error = new Error("La capacidad debe ser mayor a 0");
+      error.statusCode = 400;
+      throw error;
     }
 
     if (price === undefined || Number(price) < 0) {
-      throw new Error("El precio no puede ser menor a 0");
+      const error = new Error("El precio no puede ser menor a 0");
+      error.statusCode = 400;
+      throw error;
     }
 
     if (
       status &&
       !["draft", "published", "cancelled", "finished"].includes(status)
     ) {
-      throw new Error("El estado del evento no es válido");
+      const error = new Error("El estado del evento no es válido");
+      error.statusCode = 400;
+      throw error;
     }
 
     return await this.eventsRepository.createEvent({
@@ -170,23 +190,29 @@ class EventsService {
     const event = await this.eventsRepository.getEventById(id);
 
     if (!event) {
-      throw new Error("Evento no encontrado");
+      const error = new Error("Evento no encontrado");
+      error.statusCode = 404;
+      throw error;
     }
 
     const isAdmin = user.role === "admin";
     const isOwner = event.organizer.toString() === user.id.toString();
 
     if (!isAdmin && !isOwner) {
-      throw new Error("No tenés permisos para modificar este evento");
+      const error = new Error("No tenés permisos para modificar este evento");
+      error.statusCode = 403;
+      throw error;
     }
 
     if (event.status === "cancelled") {
       const justification = eventData.justification;
 
       if (!justification || !justification.trim()) {
-        throw new Error(
+        const error = new Error(
           "Un evento cancelado solo puede modificarse presentando una justificación",
         );
+        error.statusCode = 400;
+        throw error;
       }
     }
 
@@ -194,29 +220,43 @@ class EventsService {
       const eventDate = new Date(eventData.date);
 
       if (Number.isNaN(eventDate.getTime())) {
-        throw new Error("La fecha del evento no es válida");
+        const error = new Error("La fecha del evento no es válida");
+        error.statusCode = 400;
+        throw error;
       }
 
       if (eventDate < new Date()) {
-        throw new Error("No se puede modificar el evento a una fecha pasada");
+        const error = new Error(
+          "No se puede modificar el evento a una fecha pasada",
+        );
+        error.statusCode = 400;
+        throw error;
       }
 
       eventData.date = eventDate;
     }
 
     if (eventData.capacity !== undefined && Number(eventData.capacity) <= 0) {
-      throw new Error("La capacidad debe ser mayor a 0");
+      const error = new Error("La capacidad debe ser mayor a 0");
+      error.statusCode = 400;
+      throw error;
     }
 
     if (eventData.price !== undefined && Number(eventData.price) < 0) {
-      throw new Error("El precio no puede ser menor a 0");
+      const error = new Error("El precio no puede ser menor a 0");
+      error.statusCode = 400;
+      throw error;
     }
 
     if (
       eventData.status === "published" &&
       (event.status === "finished" || event.status === "cancelled")
     ) {
-      throw new Error("No se puede publicar un evento finalizado o cancelado");
+      const error = new Error(
+        "No se puede publicar un evento finalizado o cancelado",
+      );
+      error.statusCode = 400;
+      throw error;
     }
 
     delete eventData.organizer;
@@ -229,34 +269,46 @@ class EventsService {
     const event = await this.eventsRepository.getEventById(id);
 
     if (!event) {
-      throw new Error("Evento no encontrado");
+      const error = new Error("Evento no encontrado");
+      error.statusCode = 404;
+      throw error;
     }
 
     const isAdmin = user.role === "admin";
     const isOwner = event.organizer.toString() === user.id.toString();
 
     if (!isAdmin && !isOwner) {
-      throw new Error("No tenés permisos para modificar este evento");
+      const error = new Error("No tenés permisos para modificar este evento");
+      error.statusCode = 403;
+      throw error;
     }
 
     const allowedStatuses = ["draft", "published", "cancelled", "finished"];
 
     if (!allowedStatuses.includes(status)) {
-      throw new Error("El estado del evento no es válido");
+      const error = new Error("El estado del evento no es válido");
+      error.statusCode = 400;
+      throw error;
     }
 
     if (
       status === "published" &&
       (event.status === "finished" || event.status === "cancelled")
     ) {
-      throw new Error("No se puede publicar un evento finalizado o cancelado");
+      const error = new Error(
+        "No se puede publicar un evento finalizado o cancelado",
+      );
+      error.statusCode = 400;
+      throw error;
     }
 
     if (event.status === "cancelled") {
       if (!justification || !justification.trim()) {
-        throw new Error(
+        const error = new Error(
           "Un evento cancelado solo puede modificarse presentando una justificación",
         );
+        error.statusCode = 400;
+        throw error;
       }
     }
 

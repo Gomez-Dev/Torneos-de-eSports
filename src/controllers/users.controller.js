@@ -1,27 +1,19 @@
-import UsersRepository from "../repositories/users.repository.js";
+import UsersService from "../services/users.service.js";
+import { userDTO } from "../dto/user.dto.js";
 
-const usersRepository = new UsersRepository();
+const usersService = new UsersService();
 
-export const getUsers = async (req, res) => {
+export const getUsers = async (req, res, next) => {
   try {
-    const users = await usersRepository.getAllUsers();
+    const users = await usersService.getAllUsers();
 
-    const usersWithoutPassword = users.map((user) => ({
-      id: user._id,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email: user.email,
-      role: user.role,
-    }));
+    const usersDTO = users.map((user) => userDTO(user));
 
     res.status(200).json({
       status: "success",
-      payload: usersWithoutPassword,
+      payload: usersDTO,
     });
   } catch (error) {
-    res.status(500).json({
-      status: "error",
-      message: error.message,
-    });
+    next(error);
   }
 };

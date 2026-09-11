@@ -1,63 +1,52 @@
 import EventsService from "../services/events.service.js";
+import { eventDTO } from "../dto/event.dto.js";
 
 const eventsService = new EventsService();
 
-export const getEvents = async (req, res) => {
+export const getEvents = async (req, res, next) => {
   try {
     const result = await eventsService.getAllEvents(req.query);
 
     res.status(200).json({
       status: "success",
-      ...result,
+      data: result.data.map((event) => eventDTO(event)),
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
+      totalPages: result.totalPages,
     });
   } catch (error) {
-    res.status(400).json({
-      status: "error",
-      message: error.message,
-    });
+    next(error);
   }
 };
 
-export const getEventById = async (req, res) => {
+export const getEventById = async (req, res, next) => {
   try {
     const event = await eventsService.getEventById(req.params.id);
 
     res.status(200).json({
       status: "success",
-      payload: event,
+      payload: eventDTO(event),
     });
   } catch (error) {
-    if (error.message === "Evento no encontrado") {
-      return res.status(404).json({
-        status: "error",
-        message: error.message,
-      });
-    }
-
-    res.status(400).json({
-      status: "error",
-      message: error.message,
-    });
+    next(error);
   }
 };
 
-export const createEvent = async (req, res) => {
+export const createEvent = async (req, res, next) => {
   try {
     const event = await eventsService.createEvent(req.body, req.user.id);
 
     res.status(201).json({
       status: "success",
-      payload: event,
+      payload: eventDTO(event),
     });
   } catch (error) {
-    res.status(400).json({
-      status: "error",
-      message: error.message,
-    });
+    next(error);
   }
 };
 
-export const updateEvent = async (req, res) => {
+export const updateEvent = async (req, res, next) => {
   try {
     const event = await eventsService.updateEvent(
       req.params.id,
@@ -67,31 +56,14 @@ export const updateEvent = async (req, res) => {
 
     res.status(200).json({
       status: "success",
-      payload: event,
+      payload: eventDTO(event),
     });
   } catch (error) {
-    if (error.message === "Evento no encontrado") {
-      return res.status(404).json({
-        status: "error",
-        message: error.message,
-      });
-    }
-
-    if (error.message.includes("No tenés permisos")) {
-      return res.status(403).json({
-        status: "error",
-        message: error.message,
-      });
-    }
-
-    res.status(400).json({
-      status: "error",
-      message: error.message,
-    });
+    next(error);
   }
 };
 
-export const updateEventStatus = async (req, res) => {
+export const updateEventStatus = async (req, res, next) => {
   try {
     const event = await eventsService.updateEventStatus(
       req.params.id,
@@ -102,26 +74,9 @@ export const updateEventStatus = async (req, res) => {
 
     res.status(200).json({
       status: "success",
-      payload: event,
+      payload: eventDTO(event),
     });
   } catch (error) {
-    if (error.message === "Evento no encontrado") {
-      return res.status(404).json({
-        status: "error",
-        message: error.message,
-      });
-    }
-
-    if (error.message.includes("No tenés permisos")) {
-      return res.status(403).json({
-        status: "error",
-        message: error.message,
-      });
-    }
-
-    res.status(400).json({
-      status: "error",
-      message: error.message,
-    });
+    next(error);
   }
 };
